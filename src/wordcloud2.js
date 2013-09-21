@@ -297,6 +297,7 @@ if (!window.clearImmediate) {
 
     /* information/object available to all functions, set when start() */
     var ctx, // canvas context
+      svg, // SVG canvas
       grid, // 2d array containing filling information
       ngx, ngy, // width and height of the grid
       center, // position of the center of the cloud
@@ -607,33 +608,51 @@ if (!window.clearImmediate) {
       var fontSize = info.fontSize;
       var mu = info.mu;
 
-      // Save the current state before messing it
-      ctx.save();
-      ctx.scale(1 / mu, 1 / mu);
-
-      ctx.font = settings.fontWeight + ' ' + (fontSize * mu).toString(10) + 'px ' + settings.fontFamily;
-      if (getTextColor) {
-        ctx.fillStyle = getTextColor(word, weight, fontSize, distance, theta);
+      if (svg) {
+        var text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        
+        text.setAttributeNS(null, "x", ((gx + info.gw / 2) * g * mu) + info.fillTextOffsetX * mu);
+        text.setAttributeNS(null, "y", ((gy + info.gh / 2) * g * mu) + info.fillTextOffsetY * mu);
+        text.setAttributeNS(null, "font-size",  fontSize * mu);
+        text.setAttributeNS(null, "fill", settings.color);
+        text.textContent = word;
+        
+        svg.appendChild(text);
+        
+        if (rotateDeg !== 0) {
+          // Since we need to calculate the center of the text in order to rotate it properly, we have to add it to the element first.
+          var box = text.getBBox();
+          text.setAttributeNS(null, "transform", "rotate(" + ((rotateDeg * -180) / Math.PI) + " " + ((box.width / 2) + box.x) + " " + ((box.height / 2) + box.y) + ")");
+        }
       } else {
-        ctx.fillStyle = settings.color;
+        // Save the current state before messing it
+        ctx.save();
+        ctx.scale(1 / mu, 1 / mu);
+  
+        ctx.font = settings.fontWeight + ' ' + (fontSize * mu).toString(10) + 'px ' + settings.fontFamily;
+        if (getTextColor) {
+          ctx.fillStyle = getTextColor(word, weight, fontSize, distance, theta);
+        } else {
+          ctx.fillStyle = settings.color;
+        }
+        ctx.textBaseline = 'alphabetic';
+  
+        // Translate the canvas position to the origin coordinate of where
+        // the text should be put.
+        ctx.translate((gx + info.gw / 2) * g * mu,
+                      (gy + info.gh / 2) * g * mu);
+  
+        if (rotateDeg !== 0) {
+          ctx.rotate(- rotateDeg);
+        }
+  
+        // Finally, fill the text.
+        ctx.fillText(word, info.fillTextOffsetX * mu,
+                          info.fillTextOffsetY * mu);
+
+        // Restore the state.
+        ctx.restore();
       }
-      ctx.textBaseline = 'alphabetic';
-
-      // Translate the canvas position to the origin coordinate of where
-      // the text should be put.
-      ctx.translate((gx + info.gw / 2) * g * mu,
-                    (gy + info.gh / 2) * g * mu);
-
-      if (rotateDeg !== 0) {
-        ctx.rotate(- rotateDeg);
-      }
-
-      // Finally, fill the text.
-      ctx.fillText(word, info.fillTextOffsetX * mu,
-                         info.fillTextOffsetY * mu);
-
-      // Restore the state.
-      ctx.restore();
     };
 
     /* Help function to updateGrid */
@@ -765,16 +784,29 @@ if (!window.clearImmediate) {
 
     /* Start drawing on a canvas */
     var start = function start(canvas) {
+      var useCanvas;
+      
       // Sending a wordcloudstart event which cause the previous loop to stop.
       // Do nothing if the event is canceled.
       if (!sendEvent(canvas, 'wordcloudstart', true)) {
         return;
       }
 
-      ngx = Math.floor(canvas.width / g);
-      ngy = Math.floor(canvas.height / g);
-      ctx = canvas.getContext('2d');
-
+      
+      if (canvas.tagName.toLowerCase() === "canvas")
+        useCanvas = true
+      
+      if (useCanvas) {
+        ctx = canvas.getContext('2d');
+        ngx = Math.floor(canvas.width / g);
+        ngy = Math.floor(canvas.height / g);
+      } else {
+        svg = canvas;
+        svg.style.fontFamily = settings.fontFamily;
+        
+        ngx = Math.floor(parseInt(canvas.getAttribute("width"), 10) / g);
+        ngy = Math.floor(parseInt(canvas.getAttribute("height"), 10) / g);
+      }
       // Determine the center of the word cloud
       center = (settings.origin) ?
         [settings.origin[0]/g, settings.origin[1]/g] :
@@ -787,10 +819,19 @@ if (!window.clearImmediate) {
          if not, update the grid to the current canvas state */
       grid = [];
 
-      if (settings.clearCanvas) {
-        ctx.fillStyle = settings.backgroundColor;
-        ctx.clearRect(0, 0, ngx * (g + 1), ngy * (g + 1));
-        ctx.fillRect(0, 0, ngx * (g + 1), ngy * (g + 1));
+      // Since there is no simple way to get the image data from an SVG, it must be cleared.
+      if (settings.clearCanvas || !useCanvas) {
+        if (useCanvas) {
+          ctx.fillStyle = settings.backgroundColor;
+          ctx.clearRect(0, 0, ngx * (g + 1), ngy * (g + 1));
+          ctx.fillRect(0, 0, ngx * (g + 1), ngy * (g + 1));
+        } else {
+          svg.style.background = settings.backgroundColor;
+          // Clear SVG
+          //NOTE: svg.innerHTML = "" does not work in WebKit.
+          while (svg.lastChild)
+            svg.removeChild(svg.lastChild);
+        }
 
         /* fill the grid with empty state */
         var gx = ngx, gy;
