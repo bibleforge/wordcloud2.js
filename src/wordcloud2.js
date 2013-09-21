@@ -610,13 +610,11 @@ if (!window.clearImmediate) {
 
       if (svg) {
         var text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        
         text.setAttributeNS(null, "x", ((gx + info.gw / 2) * g * mu) + info.fillTextOffsetX * mu);
         text.setAttributeNS(null, "y", ((gy + info.gh / 2) * g * mu) + info.fillTextOffsetY * mu);
         text.setAttributeNS(null, "font-size",  fontSize * mu);
         text.setAttributeNS(null, "fill", settings.color);
         text.textContent = word;
-        
         svg.appendChild(text);
         
         if (rotateDeg !== 0) {
@@ -656,14 +654,25 @@ if (!window.clearImmediate) {
     };
 
     /* Help function to updateGrid */
-    var fillGridAt = function fillGridAt(x, y, drawMask, dimension, item) {
+    var fillGridAt = function fillGridAt(x, y, drawMask, dimension, item, maskColor) {
       if (x >= ngx || y >= ngy || x < 0 || y < 0)
         return;
 
       grid[x][y] = false;
 
-      if (drawMask)
-        ctx.fillRect(x * g, y * g, maskRectWidth, maskRectWidth);
+      if (drawMask) {
+        if (svg) {
+          var rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");        
+          rect.setAttributeNS(null, "x", x * g);
+          rect.setAttributeNS(null, "y", y * g);
+          rect.setAttributeNS(null, "width", maskRectWidth);
+          rect.setAttributeNS(null, "height", maskRectWidth);
+          rect.setAttributeNS(null, "fill", maskColor);
+          svg.appendChild(rect);
+        } else {
+          ctx.fillRect(x * g, y * g, maskRectWidth, maskRectWidth);
+        }
+      }
 
       if (interactive) {
         infoGrid[x][y] = { item: item, dimension: dimension };
@@ -676,7 +685,7 @@ if (!window.clearImmediate) {
       var occupied = info.occupied;
       var maskRectWidth = g - settings.maskGapWidth;
       var drawMask = settings.drawMask;
-      if (drawMask) {
+      if (drawMask && !svg) {
         ctx.save();
         ctx.fillStyle = settings.maskColor;
       }
@@ -695,10 +704,10 @@ if (!window.clearImmediate) {
       var i = occupied.length;
       while (i--) {
         fillGridAt(gx + occupied[i][0], gy + occupied[i][1],
-                   drawMask, dimension, item);
+                   drawMask, dimension, item, settings.maskColor);
       }
 
-      if (drawMask)
+      if (drawMask && !svg)
         ctx.restore();
     };
 
