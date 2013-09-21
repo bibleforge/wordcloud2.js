@@ -607,16 +607,24 @@ if (!window.clearImmediate) {
                                      distance, theta, rotateDeg) {
       var fontSize = info.fontSize;
       var mu = info.mu;
+      var textColor;
+
+      if (getTextColor) {
+        textColor = getTextColor(word, weight, fontSize, distance, theta);
+      } else {
+        textColor = settings.color;
+      }
 
       if (svg) {
         var text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         text.setAttributeNS(null, "x", ((gx + info.gw / 2) * g * mu) + info.fillTextOffsetX * mu);
         text.setAttributeNS(null, "y", ((gy + info.gh / 2) * g * mu) + info.fillTextOffsetY * mu);
-        text.setAttributeNS(null, "font-size",  fontSize * mu);
-        text.setAttributeNS(null, "fill", settings.color);
+        text.setAttributeNS(null, "font-size", (fontSize * mu).toString(10));
+        text.setAttributeNS(null, "font-weight", settings.fontWeight);
+        text.setAttributeNS(null, "fill", textColor);
         text.textContent = word;
         svg.appendChild(text);
-        
+
         if (rotateDeg !== 0) {
           // Since we need to calculate the center of the text in order to rotate it properly, we have to add it to the element first.
           var box = text.getBBox();
@@ -626,13 +634,11 @@ if (!window.clearImmediate) {
         // Save the current state before messing it
         ctx.save();
         ctx.scale(1 / mu, 1 / mu);
-  
+
         ctx.font = settings.fontWeight + ' ' + (fontSize * mu).toString(10) + 'px ' + settings.fontFamily;
-        if (getTextColor) {
-          ctx.fillStyle = getTextColor(word, weight, fontSize, distance, theta);
-        } else {
-          ctx.fillStyle = settings.color;
-        }
+
+        ctx.fillStyle = textColor;
+
         ctx.textBaseline = 'alphabetic';
   
         // Translate the canvas position to the origin coordinate of where
