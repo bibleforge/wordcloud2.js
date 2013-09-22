@@ -2,7 +2,7 @@
 <html lang="en"><head>
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta charset="utf-8">
-  <title>wordcloud2.js - tag cloud/Wordle presentation on HTML5 canvas element</title>
+  <title>wordcloud2.js - tag cloud/Wordle presentation in SVG</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="">
   <meta name="author" content="">
@@ -206,7 +206,7 @@
     </div>
   </div>
   <div class="container">
-    <p class="lead"><strong>wordcloud2.js</strong>, tag cloud/Wordle presentation on HTML5 canvas element</p>
+    <p class="lead"><strong>wordcloud2.js</strong>, tag cloud/Wordle presentation in SVG</p>
     <div id="not-supported" class="alert" hidden="">
       <strong>Your browser is not supported.</strong>
     </div>
@@ -810,7 +810,7 @@
     });
 
     $('#btn-save').on('click', function save(evt) {
-      // Convert the SVG to canvas
+      // Get SVG data
       var data,
         that = this;
       // Get the SVG data.
