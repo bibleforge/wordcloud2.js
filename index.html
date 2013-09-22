@@ -217,7 +217,7 @@
         <div id="box" hidden=""></div></div>
         <div class="span6">
           <button class="btn btn-primary" type="submit">Run</button>
-          <a class="btn" id="btn-save" href="#" download="wordcloud.png">Save</a>
+          <a class="btn" id="btn-save" href="#" download="wordcloud.svg">Save</a>
           <span id="loading">......</span>
         </div>
         <div class="span6">
@@ -810,15 +810,25 @@
     });
 
     $('#btn-save').on('click', function save(evt) {
-      var url = $canvas[0].toDataURL();
-      if ('download' in document.createElement('a')) {
-        this.href = url;
+      // Convert the SVG to canvas
+      var data,
+        that = this;
+      // Get the SVG data.
+      if ($canvas[0].outerHTML) {
+        data = $canvas[0].outerHTML;
       } else {
-        evt.preventDefault();
-        alert('Please right click and choose "Save As..." to save the generated image.');
-        window.open(url, '_blank', 'width=500,height=300,menubar=yes');
+        data = new XMLSerializer().serializeToString($canvas[0])
       }
-
+      var DOMURL = self.URL || self.webkitURL || self;
+      var blob = new Blob([data], {type: "image/svg+xml;charset=utf-8"});
+      var url = DOMURL.createObjectURL(blob);
+        if ('download' in document.createElement('a')) {
+          that.href = url;
+        } else {
+          evt.preventDefault();
+          alert('Please right click and choose "Save As..." to save the generated image.');
+          window.open(url, '_blank', 'width=500,height=300,menubar=yes');
+        }
     });
 
     var $examples = $('#examples');
