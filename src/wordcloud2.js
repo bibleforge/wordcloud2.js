@@ -150,7 +150,6 @@ if (!window.clearImmediate) {
     if (typeof canvas === 'string') {
       canvas = document.getElementById(canvas);
     }
-    
 
     /* Default values to be overwritten by options object */
     var settings = {
@@ -419,16 +418,16 @@ if (!window.clearImmediate) {
     /* Get the deg of rotation according to settings, and luck. */
     var getRotateDeg = function getRotateDeg(word, weight) {
       var rotateRatio;
-      
+
       if (settings.rotateRatio === 0)
         return 0;
-      
+
       if (typeof settings.rotateRatio === 'function') {
         rotateRatio = settings.rotateRatio(word, weight);
       } else {
         rotateRatio = settings.rotateRatio;
       }
-      
+
       if (Math.random() > rotateRatio)
         return 0;
 
@@ -640,16 +639,16 @@ if (!window.clearImmediate) {
         ctx.fillStyle = textColor;
 
         ctx.textBaseline = 'alphabetic';
-  
+
         // Translate the canvas position to the origin coordinate of where
         // the text should be put.
         ctx.translate((gx + info.gw / 2) * g * mu,
                       (gy + info.gh / 2) * g * mu);
-  
+
         if (rotateDeg !== 0) {
           ctx.rotate(- rotateDeg);
         }
-  
+
         // Finally, fill the text.
         ctx.fillText(word, info.fillTextOffsetX * mu,
                           info.fillTextOffsetY * mu);
@@ -800,17 +799,17 @@ if (!window.clearImmediate) {
     /* Start drawing on a canvas */
     var start = function start(canvas) {
       var useCanvas;
-      
+
       // Sending a wordcloudstart event which cause the previous loop to stop.
       // Do nothing if the event is canceled.
       if (!sendEvent(canvas, 'wordcloudstart', true)) {
         return;
       }
 
-      
+
       if (canvas.tagName.toLowerCase() === "canvas")
         useCanvas = true
-      
+
       if (useCanvas) {
         ctx = canvas.getContext('2d');
         ngx = Math.floor(canvas.width / g);
@@ -818,7 +817,7 @@ if (!window.clearImmediate) {
       } else {
         svg = canvas;
         svg.style.fontFamily = settings.fontFamily;
-        
+
         ngx = Math.floor(parseInt(canvas.getAttribute("width"), 10) / g);
         ngy = Math.floor(parseInt(canvas.getAttribute("height"), 10) / g);
       }
