@@ -850,6 +850,8 @@ if (!window.clearImmediate) {
 
         ngx = Math.floor(parseInt(canvas.getAttribute("width"), 10) / g);
         ngy = Math.floor(parseInt(canvas.getAttribute("height"), 10) / g);
+        
+        svg.style.background = settings.backgroundColor;
       }
       // Determine the center of the word cloud
       center = (settings.origin) ?
@@ -869,7 +871,6 @@ if (!window.clearImmediate) {
           ctx.clearRect(0, 0, ngx * (g + 1), ngy * (g + 1));
           ctx.fillRect(0, 0, ngx * (g + 1), ngy * (g + 1));
         } else {
-          svg.style.background = settings.backgroundColor;
           // Clear SVG
           //NOTE: svg.innerHTML = "" does not work in WebKit.
           while (svg.lastChild)
@@ -902,23 +903,29 @@ if (!window.clearImmediate) {
           // Convert the SVG to canvas
           waitingForData = true;
           var data;
+          // Get the SVG data.
           if (canvas.outerHTML) {
               data = svg.outerHTML;
           } else {
               data = new XMLSerializer().serializeToString(svg)
           }
-          var tmpctx = document.createElement("canvas").getContext("2d");
+          var tmpCanvas = document.createElement("canvas");
+          var tmpctx = tmpCanvas.getContext("2d");
+          tmpCanvas.setAttribute("width", (ngx * g) + "px");
+          tmpCanvas.setAttribute("height", (ngy * g) + "px");
+          // Convert the SVG into something we can load into an <img>
           var DOMURL = self.URL || self.webkitURL || self;
           var img = new Image();
-          
           var blob = new Blob([data], {type: "image/svg+xml;charset=utf-8"});
           var url = DOMURL.createObjectURL(blob);
           img.src = url;
           img.onload = function () {
               tmpctx.drawImage(img, 0, 0);
               DOMURL.revokeObjectURL(url);
+              //BUG: This should work in Chrome 31+.
               examineImageData(tmpctx.getImageData(0, 0, ngx * g, ngy * g).data);
               waitingForData = false;
+              tmpCanvas = tmpctx = undefined;
           };
         }
       }
