@@ -799,6 +799,36 @@ if (!window.clearImmediate) {
     /* Start drawing on a canvas */
     var start = function start(canvas) {
       var useCanvas;
+      var waitingForData;
+
+      function examineImageData(imageData) {
+        var gx = ngx, gy, x, y, i;
+        while (gx--) {
+          grid[gx] = [];
+          gy = ngy;
+          while (gy--) {
+            y = g;
+            singleGridLoop: while (y--) {
+              x = g;
+              while (x--) {
+                i = 4;
+                while (i--) {
+                  if (imageData[((gy * g + y) * ngx * g +
+                                (gx * g + x)) * 4 + i] !== bgPixel[i]) {
+                    grid[gx][gy] = false;
+                    break singleGridLoop;
+                  }
+                }
+              }
+            }
+            if (grid[gx][gy] !== false) {
+              grid[gx][gy] = true;
+            }
+          }
+        }
+
+        imageData = bctx = bgPixel = undefined;
+      }
 
       // Sending a wordcloudstart event which cause the previous loop to stop.
       // Do nothing if the event is canceled.
@@ -833,8 +863,7 @@ if (!window.clearImmediate) {
          if not, update the grid to the current canvas state */
       grid = [];
 
-      // Since there is no simple way to get the image data from an SVG, it must be cleared.
-      if (settings.clearCanvas || !useCanvas) {
+      if (settings.clearCanvas) {
         if (useCanvas) {
           ctx.fillStyle = settings.backgroundColor;
           ctx.clearRect(0, 0, ngx * (g + 1), ngy * (g + 1));
@@ -864,37 +893,34 @@ if (!window.clearImmediate) {
         bctx.fillStyle = settings.backgroundColor;
         bctx.fillRect(0, 0, 1, 1);
         var bgPixel = bctx.getImageData(0, 0, 1, 1).data;
-
+        
         /* Read back the pixels of the canvas we got to tell which part of the
            canvas is empty. */
-        var imageData = ctx.getImageData(0, 0, ngx * g, ngy * g).data;
-
-        var gx = ngx, gy, x, y, i;
-        while (gx--) {
-          grid[gx] = [];
-          gy = ngy;
-          while (gy--) {
-            y = g;
-            singleGridLoop: while (y--) {
-              x = g;
-              while (x--) {
-                i = 4;
-                while (i--) {
-                  if (imageData[((gy * g + y) * ngx * g +
-                                 (gx * g + x)) * 4 + i] !== bgPixel[i]) {
-                    grid[gx][gy] = false;
-                    break singleGridLoop;
-                  }
-                }
-              }
-            }
-            if (grid[gx][gy] !== false) {
-              grid[gx][gy] = true;
-            }
+        if (useCanvas) {
+          examineImageData(ctx.getImageData(0, 0, ngx * g, ngy * g).data);
+        } else {
+          // Convert the SVG to canvas
+          waitingForData = true;
+          var data;
+          if (canvas.outerHTML) {
+              data = svg.outerHTML;
+          } else {
+              data = new XMLSerializer().serializeToString(svg)
           }
+          var tmpctx = document.createElement("canvas").getContext("2d");
+          var DOMURL = self.URL || self.webkitURL || self;
+          var img = new Image();
+          
+          var blob = new Blob([data], {type: "image/svg+xml;charset=utf-8"});
+          var url = DOMURL.createObjectURL(blob);
+          img.src = url;
+          img.onload = function () {
+              tmpctx.drawImage(img, 0, 0);
+              DOMURL.revokeObjectURL(url);
+              examineImageData(tmpctx.getImageData(0, 0, ngx * g, ngy * g).data);
+              waitingForData = false;
+          };
         }
-
-        imageData = bctx = bgPixel = undefined;
       }
 
       // fill the infoGrid with empty state if we need it
@@ -943,26 +969,28 @@ if (!window.clearImmediate) {
       canvas.addEventListener('wordcloudstart', anotherWordCloudStart);
 
       var timer = loopingFunction(function loop() {
-        if (i >= settings.list.length) {
-          stoppingFunction(timer);
-          sendEvent(canvas, 'wordcloudstop', false);
-          canvas.removeEventListener('wordcloudstart', anotherWordCloudStart);
+        if (!waitingForData) {
+          if (i >= settings.list.length) {
+            stoppingFunction(timer);
+            sendEvent(canvas, 'wordcloudstop', false);
+            canvas.removeEventListener('wordcloudstart', anotherWordCloudStart);
 
-          return;
+            return;
+          }
+          escapeTime = (new Date()).getTime();
+          var drawn = putWord(settings.list[i]);
+          var canceled = !sendEvent(canvas, 'wordclouddrawn', true, {
+            item: settings.list[i], drawn: drawn });
+          if (exceedTime() || canceled) {
+            stoppingFunction(timer);
+            settings.abort();
+            sendEvent(canvas, 'wordcloudabort', false);
+            sendEvent(canvas, 'wordcloudstop', false);
+            canvas.removeEventListener('wordcloudstart', anotherWordCloudStart);
+            return;
+          }
+          i++;
         }
-        escapeTime = (new Date()).getTime();
-        var drawn = putWord(settings.list[i]);
-        var canceled = !sendEvent(canvas, 'wordclouddrawn', true, {
-          item: settings.list[i], drawn: drawn });
-        if (exceedTime() || canceled) {
-          stoppingFunction(timer);
-          settings.abort();
-          sendEvent(canvas, 'wordcloudabort', false);
-          sendEvent(canvas, 'wordcloudstop', false);
-          canvas.removeEventListener('wordcloudstart', anotherWordCloudStart);
-          return;
-        }
-        i++;
         timer = loopingFunction(loop, settings.wait);
       }, settings.wait);
     };
